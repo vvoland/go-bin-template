@@ -1,0 +1,24 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigestsToSemver",
+    "helpers:githubDigestChangelogs"
+  ],
+  "minimumReleaseAge": "3 days",
+  "packageRules": [
+    {
+      "description": "Group safe routine updates",
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "groupName": "routine dependency updates"
+    },
+    {
+      "description": "Allow gha-pin-diff to stay on semver tag instead of digest pinning",
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": ["vvoland/gha-pin-diff"],
+      "pinDigests": false,
+      "enabled": false
+    }
+  ],
+  "postUpdateOptions": ["gomodTidy"]
+}
