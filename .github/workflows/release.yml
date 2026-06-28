@@ -49,8 +49,9 @@ jobs:
 
       - name: Build binary
         run: |
-          docker buildx create --use
-          docker buildx bake binary \
+          builder=release-builder
+          docker buildx inspect "$builder" >/dev/null 2>&1 || docker buildx create --name "$builder"
+          docker buildx bake --builder "$builder" binary \
             --set "*.platform=${{ matrix.os }}/${{ matrix.arch }}" \
             --set "*.cache-from=type=gha,scope=${NAME}" \
             --set "*.cache-to=type=gha,mode=max,scope=${NAME}"
