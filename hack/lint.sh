@@ -50,7 +50,7 @@ run_silent() {
 build() {
     local target=$1
     printf "%s> Building %s%s\n" "$INFO" "$target" "$RESET"
-    run_silent docker buildx build -q --load "${BUILD_CACHE_ARGS[@]}" -f lint.Dockerfile --target "$target" -t "lint/$target" .
+    run_silent docker buildx build -q --load ${BUILD_CACHE_ARGS[@]+"${BUILD_CACHE_ARGS[@]}"} -f lint.Dockerfile --target "$target" -t "lint/$target" .
 }
 
 docker_run() {
@@ -93,7 +93,7 @@ lint_actionlint() {
     build actionlint
     printf "%s> Linting GHA yaml files%s\n" "$INFO" "$RESET"
     # actionlint auto-detects $GITHUB_ACTIONS and emits ::error workflow commands.
-    docker_run "${CI_ENV[@]}" \
+    docker_run ${CI_ENV[@]+"${CI_ENV[@]}"} \
         -v ./.github:/work/.github:ro \
         -v ./.git:/work/.git:ro \
         lint/actionlint -color
