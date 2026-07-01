@@ -60,17 +60,36 @@ docker_run() {
         --rm -w /work "$@"
 }
 
+has_workflow_yaml() {
+    [[ -d .github/workflows ]] || return 1
+    find .github/workflows -type f \( -name '*.yaml' -o -name '*.yml' \) -print -quit | grep -q .
+}
+
 lint_yamllint() {
+    if ! has_workflow_yaml; then
+        printf "%s> No GitHub Actions yaml files found; skipping yamllint%s\n" "$INFO" "$RESET"
+        return 0
+    fi
+
     build yamllint
     printf "%s> Linting yaml files%s\n" "$INFO" "$RESET"
     local format=${GITHUB_ACTIONS:+github}
+    local config_mount=()
+    if [[ -f .yamllint.yaml ]]; then
+        config_mount=(-v ./.yamllint.yaml:/work/.yamllint.yaml:ro)
+    fi
     docker_run \
         -v ./.github/workflows:/work/.github/workflows:ro \
-        -v ./.yamllint.yaml:/work/.yamllint.yaml:ro \
+        "${config_mount[@]}" \
         lint/yamllint -f "${format:-colored}" .github/workflows
 }
 
 lint_actionlint() {
+    if ! has_workflow_yaml; then
+        printf "%s> No GitHub Actions yaml files found; skipping actionlint%s\n" "$INFO" "$RESET"
+        return 0
+    fi
+
     build actionlint
     printf "%s> Linting GHA yaml files%s\n" "$INFO" "$RESET"
     # actionlint auto-detects $GITHUB_ACTIONS and emits ::error workflow commands.
