@@ -37,6 +37,13 @@ if [[ -n ${GITHUB_ACTIONS:-} ]]; then
     CI_ENV=(-e GITHUB_ACTIONS=true)
 fi
 
+# Mount the vendor directory only when it exists; projects using the module
+# cache instead of vendoring don't have it, and Docker errors on missing paths.
+VENDOR_MOUNT=()
+if [[ -d vendor ]]; then
+    VENDOR_MOUNT=(-v ./vendor:/work/vendor)
+fi
+
 run() {
     printf "  %s\$ %s%s\n" "$GREY" "$*" "$RESET"
     "$@"
@@ -50,7 +57,7 @@ run_silent() {
 build() {
     local target=$1
     printf "%s> Building %s%s\n" "$INFO" "$target" "$RESET"
-    run_silent docker buildx build -q --load "${BUILD_CACHE_ARGS[@]}" -f lint.Dockerfile --target "$target" -t "lint/$target" .
+    run_silent docker buildx build -q --load ${BUILD_CACHE_ARGS[@]+"${BUILD_CACHE_ARGS[@]}"} -f lint.Dockerfile --target "$target" -t "lint/$target" .
 }
 
 docker_run() {
@@ -93,7 +100,7 @@ lint_actionlint() {
     build actionlint
     printf "%s> Linting GHA yaml files%s\n" "$INFO" "$RESET"
     # actionlint auto-detects $GITHUB_ACTIONS and emits ::error workflow commands.
-    docker_run "${CI_ENV[@]}" \
+    docker_run ${CI_ENV[@]+"${CI_ENV[@]}"} \
         -v ./.github:/work/.github:ro \
         -v ./.git:/work/.git:ro \
         lint/actionlint -color
@@ -104,7 +111,7 @@ lint_golangci_lint() {
     printf "%s> Linting Go files%s\n" "$INFO" "$RESET"
     docker_run \
         -v ./:/work \
-        -v ./vendor:/work/vendor \
+        ${VENDOR_MOUNT[@]+"${VENDOR_MOUNT[@]}"} \
         "${GO_CACHE_MOUNTS[@]}" \
         lint/golangci-lint run --color=always ./...
 }
@@ -114,7 +121,7 @@ lint_modernize() {
     printf "%s> Running modernize analyzer%s\n" "$INFO" "$RESET"
     docker_run \
         -v ./:/work \
-        -v ./vendor:/work/vendor \
+        ${VENDOR_MOUNT[@]+"${VENDOR_MOUNT[@]}"} \
         "${GO_CACHE_MOUNTS[@]}" \
         lint/modernize ./...
 }
@@ -124,7 +131,7 @@ fmt_modernize() {
     printf "%s> Applying modernize fixes%s\n" "$INFO" "$RESET"
     docker_run \
         -v ./:/work \
-        -v ./vendor:/work/vendor \
+        ${VENDOR_MOUNT[@]+"${VENDOR_MOUNT[@]}"} \
         "${GO_CACHE_MOUNTS[@]}" \
         lint/modernize -fix ./...
 }
@@ -181,7 +188,7 @@ fmt_golangci_lint() {
     printf "%s> Formatting Go files%s\n" "$INFO" "$RESET"
     docker_run \
         -v ./:/work \
-        -v ./vendor:/work/vendor \
+        ${VENDOR_MOUNT[@]+"${VENDOR_MOUNT[@]}"} \
         "${GO_CACHE_MOUNTS[@]}" \
         lint/golangci-lint run --fix ./...
 }
