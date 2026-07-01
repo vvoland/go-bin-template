@@ -37,6 +37,13 @@ if [[ -n ${GITHUB_ACTIONS:-} ]]; then
     CI_ENV=(-e GITHUB_ACTIONS=true)
 fi
 
+# Mount the vendor directory only when it exists; projects using the module
+# cache instead of vendoring don't have it, and Docker errors on missing paths.
+VENDOR_MOUNT=()
+if [[ -d vendor ]]; then
+    VENDOR_MOUNT=(-v ./vendor:/work/vendor)
+fi
+
 run() {
     printf "  %s\$ %s%s\n" "$GREY" "$*" "$RESET"
     "$@"
@@ -104,7 +111,7 @@ lint_golangci_lint() {
     printf "%s> Linting Go files%s\n" "$INFO" "$RESET"
     docker_run \
         -v ./:/work \
-        -v ./vendor:/work/vendor \
+        ${VENDOR_MOUNT[@]+"${VENDOR_MOUNT[@]}"} \
         "${GO_CACHE_MOUNTS[@]}" \
         lint/golangci-lint run --color=always ./...
 }
@@ -114,7 +121,7 @@ lint_modernize() {
     printf "%s> Running modernize analyzer%s\n" "$INFO" "$RESET"
     docker_run \
         -v ./:/work \
-        -v ./vendor:/work/vendor \
+        ${VENDOR_MOUNT[@]+"${VENDOR_MOUNT[@]}"} \
         "${GO_CACHE_MOUNTS[@]}" \
         lint/modernize ./...
 }
@@ -124,7 +131,7 @@ fmt_modernize() {
     printf "%s> Applying modernize fixes%s\n" "$INFO" "$RESET"
     docker_run \
         -v ./:/work \
-        -v ./vendor:/work/vendor \
+        ${VENDOR_MOUNT[@]+"${VENDOR_MOUNT[@]}"} \
         "${GO_CACHE_MOUNTS[@]}" \
         lint/modernize -fix ./...
 }
@@ -181,7 +188,7 @@ fmt_golangci_lint() {
     printf "%s> Formatting Go files%s\n" "$INFO" "$RESET"
     docker_run \
         -v ./:/work \
-        -v ./vendor:/work/vendor \
+        ${VENDOR_MOUNT[@]+"${VENDOR_MOUNT[@]}"} \
         "${GO_CACHE_MOUNTS[@]}" \
         lint/golangci-lint run --fix ./...
 }
